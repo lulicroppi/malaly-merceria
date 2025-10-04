@@ -1,0 +1,63 @@
+.home{
+  padding:24px;
+  display:grid;
+  gap:28px;
+  place-items:center;
+  max-width:980px;
+  margin-inline:auto;
+}
+
+/* Logo más chico y fluido */
+.hero{ width:100%; display:flex; justify-content:center; }
+.hero__img{
+  width:clamp(160px, 28vw, 280px); /* más chico */
+  height:auto;
+  display:block;
+  border-radius: 130px;
+}
+
+/* Tarjeta contenedora del menú */
+.panel{
+  width:100%;
+  background:#fff;
+  border:2px solid var(--blue-300);
+  border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-1);
+  padding:16px;
+}
+
+/* Grid de botones */
+.menu{
+  display:grid;
+  gap:16px;
+  width: 50%;
+}
+
+/* Botón grande, crema + azules */
+.menu__btn{
+  height:64px;
+  font-size:18px;
+  font-weight:600;
+  border:2px solid var(--blue-700);
+  border-radius:12px;
+  background:var(--cream-50);
+  color:var(--blue-900);
+  cursor:pointer;
+  transition: background .15s ease, transform .06s ease, box-shadow .15s ease;
+}
+
+.menu__btn:hover{
+  background:#fff;
+  box-shadow:var(--shadow-1);
+  transform: translateY(-1px);
+}
+
+.menu__btn:active{
+  transform: translateY(0);
+  box-shadow:none;
+}
+
+.menu__btn:focus-visible{
+  outline:3px solid var(--blue-500);
+  outline-offset:2px;
+}
