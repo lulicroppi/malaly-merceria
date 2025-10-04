@@ -1,22 +1,2 @@
-<!-- Estado de carga brevísimo -->
-<div *ngIf="loading" class="init-screen">
-  <div class="card">
-    <h2>Iniciando…</h2>
-    <p>Preparando la app.</p>
-  </div>
-</div>
-
-<!-- Primera vez: pedir Excel -->
-<div *ngIf="!loading && needsExcel" class="init-screen">
-  <div class="card">
-    <h2>Seleccioná tu Excel</h2>
-    <p>Elegí el archivo <b>merceria.xlsx</b> que vamos a usar siempre.</p>
-    <button class="btn" (click)="elegirExcel()">Elegir archivo Excel</button>
-    <p *ngIf="errorMsg" class="err">{{ errorMsg }}</p>
-  </div>
-</div>
-
-<!-- App normal -->
-<ng-template [ngIf]="!loading && !needsExcel">
   <router-outlet></router-outlet>
-</ng-template>
+

@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { ExcelService } from '../../services/excel';
 
 @Component({
   selector: 'app-home',
@@ -8,4 +9,13 @@ import { RouterLink } from '@angular/router';
   templateUrl: './home.html',
   styleUrl: './home.scss'
 })
-export class HomeComponent {}
+export class HomeComponent implements OnInit{
+
+  constructor(private excelService: ExcelService){}
+
+
+  async ngOnInit() {
+    this.excelService.warmupStructure().catch((x) => console.log(x));
+  }
+
+}

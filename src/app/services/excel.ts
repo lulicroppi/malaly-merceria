@@ -18,24 +18,27 @@ type ItemProveedor = {
 };
 
 const headers = {
-  Proveedores: ["id_proveedor","nombre","cuit","telefono","email","direccion","notas"],
+  Proveedores: ["id_proveedor", "nombre", "cuit", "telefono", "email", "direccion", "notas"],
   Productos: [
-    "id","nombre_base","variante","codigo_interno",
-    "unidad_compra","cant_por_unidad_compra",
-    "unidad_venta","permite_fraccion","permite_entero",
-    "usar_precio_como_venta","precio_compra_por_unidad_compra"
+    "id", "nombre_base", "variante", "codigo_interno",
+    "unidad_compra", "cant_por_unidad_compra",
+    "unidad_venta", "permite_fraccion", "permite_entero",
+    "usar_precio_como_venta", "precio_compra_por_unidad_compra"
   ],
   ProveedorProductos: [
-    "id_proveedor","id_producto",
-    "unidad_compra","cant_por_unidad_compra",
-    "precio_compra_por_unidad_compra","ultima_actualizacion"
+    "id_proveedor", "id_producto",
+    "unidad_compra", "cant_por_unidad_compra",
+    "precio_compra_por_unidad_compra", "ultima_actualizacion"
   ],
+  Configuraciones: ["clave", "valor", "updated_at"],
+  Ventas: ["id_venta", "fecha_hora", "medio_pago", "estado_pago", "pagado_con", "fecha_pago", "cliente", "total", "notas"],
+  VentaItems: ["id_venta", "id_producto", "nombre_producto", "modo", "unidad_venta", "cantidad", "precio_unitario", "subtotal"],
 } as const;
 
 function nowStr() {
   const d = new Date();
-  const pad = (n:number)=> String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -167,7 +170,7 @@ export class ExcelService {
     const ws = wb.Sheets[name];
     let aoa = this.toAOA(ws);
     if (!aoa || aoa.length === 0) {
-      aoa = [ (headers as any)[name].slice() ];
+      aoa = [(headers as any)[name].slice()];
       wb.Sheets[name] = XLSX.utils.aoa_to_sheet(aoa);
       if (!wb.SheetNames.includes(name)) wb.SheetNames.push(name);
     }
@@ -187,32 +190,32 @@ export class ExcelService {
     }
 
 
-    
+
     // Leer workbook actual
     const { wb, filename } = await this.readWorkbook(handle);
 
     // Asegurar hojas
     const provAoa = this.ensureSheet(wb, 'Proveedores');
     const prodAoa = this.ensureSheet(wb, 'Productos');
-    const ppAoa   = this.ensureSheet(wb, 'ProveedorProductos');
+    const ppAoa = this.ensureSheet(wb, 'ProveedorProductos');
 
     // Índices
     const idx = (hdrs: string[]) =>
       Object.fromEntries(hdrs.map((h, i) => [h, i])) as Record<string, number>;
     const provIdx = idx(provAoa[0] as string[]);
     const prodIdx = idx(prodAoa[0] as string[]);
-    const ppIdx   = idx(ppAoa[0] as string[]);
+    const ppIdx = idx(ppAoa[0] as string[]);
 
     // Alta proveedor
     const provId = `prov_${Date.now()}`;
     const provRow: any[] = new Array((provAoa[0] as any[]).length).fill('');
     provRow[provIdx['id_proveedor']] = provId;
-    provRow[provIdx['nombre']]       = proveedor.nombre || '';
-    provRow[provIdx['cuit']]         = proveedor.cuit || '';
-    provRow[provIdx['telefono']]     = proveedor.telefono || '';
-    provRow[provIdx['email']]        = proveedor.email || '';
-    provRow[provIdx['direccion']]    = proveedor.direccion || '';
-    provRow[provIdx['notas']]        = proveedor.notas || '';
+    provRow[provIdx['nombre']] = proveedor.nombre || '';
+    provRow[provIdx['cuit']] = proveedor.cuit || '';
+    provRow[provIdx['telefono']] = proveedor.telefono || '';
+    provRow[provIdx['email']] = proveedor.email || '';
+    provRow[provIdx['direccion']] = proveedor.direccion || '';
+    provRow[provIdx['notas']] = proveedor.notas || '';
     provAoa.push(provRow);
 
     // Productos + relaciones
@@ -222,7 +225,7 @@ export class ExcelService {
       for (let r = 1; r < prodAoa.length; r++) {
         const row = prodAoa[r];
         const nb2 = String(row[prodIdx['nombre_base']] || '').trim().toLowerCase();
-        const var2= String(row[prodIdx['variante']] || '').trim().toLowerCase();
+        const var2 = String(row[prodIdx['variante']] || '').trim().toLowerCase();
         if (nb2 === nb && var2 === varN) return { row, r };
       }
       return null;
@@ -241,7 +244,7 @@ export class ExcelService {
         row[prodIdx['id']] = prodId;
         return String(prodId);
       } else {
-        const prodId = `prod_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+        const prodId = `prod_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
         const newRow: any[] = new Array((prodAoa[0] as any[]).length).fill('');
         newRow[prodIdx['id']] = prodId;
         newRow[prodIdx['nombre_base']] = it.nombre_base || '';
@@ -362,12 +365,12 @@ export class ExcelService {
 
     // escribir valores
     const row = provAoa[rowIndex];
-    row[map['nombre']]    = p.nombre ?? '';
-    row[map['telefono']]  = p.telefono ?? '';
-    row[map['cuit']]      = p.cuit ?? '';
-    row[map['email']]     = p.email ?? '';
+    row[map['nombre']] = p.nombre ?? '';
+    row[map['telefono']] = p.telefono ?? '';
+    row[map['cuit']] = p.cuit ?? '';
+    row[map['email']] = p.email ?? '';
     row[map['direccion']] = p.direccion ?? '';
-    row[map['notas']]     = p.notas ?? '';
+    row[map['notas']] = p.notas ?? '';
 
     // persistir
     this.writeSheet(wb, 'Proveedores', provAoa);
@@ -380,61 +383,92 @@ export class ExcelService {
       XLSX.writeFile(wb, 'merceria.xlsx');
     }
   }
-  
- // Fallback para navegadores sin FS Access: descarga directa
-private async guardarConDescarga(proveedor: ProveedorPaso1, items: ItemProveedor[]) {
-  const wb = XLSX.utils.book_new();
 
-  // Tipamos explícitamente como any[][] para evitar las tuplas literales de headers
-  const prov: any[][] = [ Array.from(headers.Proveedores) as any[] ];
-  const prod: any[][] = [ Array.from(headers.Productos) as any[] ];
-  const pp:   any[][] = [ Array.from(headers.ProveedorProductos) as any[] ];
+  // Fallback para navegadores sin FS Access: descarga directa
+  private async guardarConDescarga(proveedor: ProveedorPaso1, items: ItemProveedor[]) {
+    const wb = XLSX.utils.book_new();
 
-  const provId = `prov_${Date.now()}`;
+    // Tipamos explícitamente como any[][] para evitar las tuplas literales de headers
+    const prov: any[][] = [Array.from(headers.Proveedores) as any[]];
+    const prod: any[][] = [Array.from(headers.Productos) as any[]];
+    const pp: any[][] = [Array.from(headers.ProveedorProductos) as any[]];
 
-  prov.push([
-    provId,
-    proveedor.nombre ?? '',
-    proveedor.cuit ?? '',
-    proveedor.telefono ?? '',
-    proveedor.email ?? '',
-    proveedor.direccion ?? '',
-    proveedor.notas ?? ''
-  ] as any[]);
+    const provId = `prov_${Date.now()}`;
 
-  for (const it of items) {
-    const prodId = `prod_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-
-    prod.push([
-      prodId,
-      it.nombre_base ?? '',
-      it.variante ?? '',
-      '',
-      it.unidad_compra,
-      it.cant_por_unidad_compra,
-      it.unidad_venta,
-      it.permite_fraccion ? 1 : 0,
-      it.permite_entero ? 1 : 0,
-      0,
-      0
-    ] as any[]);
-
-    pp.push([
+    prov.push([
       provId,
-      prodId,
-      it.unidad_compra,
-      it.cant_por_unidad_compra,
-      it.precio_compra,
-      nowStr()
+      proveedor.nombre ?? '',
+      proveedor.cuit ?? '',
+      proveedor.telefono ?? '',
+      proveedor.email ?? '',
+      proveedor.direccion ?? '',
+      proveedor.notas ?? ''
     ] as any[]);
+
+    for (const it of items) {
+      const prodId = `prod_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+      prod.push([
+        prodId,
+        it.nombre_base ?? '',
+        it.variante ?? '',
+        '',
+        it.unidad_compra,
+        it.cant_por_unidad_compra,
+        it.unidad_venta,
+        it.permite_fraccion ? 1 : 0,
+        it.permite_entero ? 1 : 0,
+        0,
+        0
+      ] as any[]);
+
+      pp.push([
+        provId,
+        prodId,
+        it.unidad_compra,
+        it.cant_por_unidad_compra,
+        it.precio_compra,
+        nowStr()
+      ] as any[]);
+    }
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(prov), 'Proveedores');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(prod), 'Productos');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(pp), 'ProveedorProductos');
+
+    XLSX.writeFile(wb, 'merceria.xlsx');
   }
 
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(prov), 'Proveedores');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(prod), 'Productos');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(pp), 'ProveedorProductos');
 
-  XLSX.writeFile(wb, 'merceria.xlsx');
-}
+  // dentro de la clase ExcelService, agregar:
+  async warmupStructure(): Promise<boolean> {
+    try {
+      // no pedimos diálogo: si no hay handle guardado, salimos silenciosamente
+      const handle = await this.idbGet<any>(this.HANDLE_KEY);
+      if (!handle) return false;
+      const ok = await this.verifyRW(handle);
+      if (!ok) return false;
+
+      // abrir workbook y asegurar TODAS las hojas (sin mostrar nada al usuario)
+      const { wb } = await this.readWorkbook(handle);
+      (Object.keys(headers) as Array<keyof typeof headers>).forEach((name) => {
+        const aoa = this.ensureSheet(wb, name);
+        this.writeSheet(wb, name, aoa);
+      });
+
+      // guardar de vuelta (sin diálogos)
+      if ((handle as any)?.createWritable) {
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const writable = await (handle as any).createWritable();
+        await writable.write(wbout);
+        await writable.close();
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
 }
 
 
