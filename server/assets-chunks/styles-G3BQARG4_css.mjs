@@ -1,2 +1,0 @@
-export default `:root{--blue-900:#0C2D48;--blue-700:#145DA0;--blue-500:#2E8BC0;--blue-300:#B1D4E0;--cream-50:#FFF7EA;--radius-xl:16px;--shadow-1:0 6px 16px rgba(0,0,0,.08)}html,body{height:100%}body{margin:0;background:var(--cream-50);color:var(--blue-900);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif;line-height:1.4}
-`;

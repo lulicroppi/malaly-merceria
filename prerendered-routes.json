@@ -1,9 +1,0 @@
-{
-  "routes": {
-    "/Malaly": {},
-    "/Malaly/proveedores": {},
-    "/Malaly/proveedores/crear": {},
-    "/Malaly/proveedores/crear/productos": {},
-    "/Malaly/proveedores/modificar": {}
-  }
-}
