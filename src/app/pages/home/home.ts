@@ -9,7 +9,7 @@ import { ExcelService } from '../../services/excel';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './home.html',
-  styleUrl: './home.css'
+  styleUrl: './home.sss'
 })
 export class HomeComponent implements OnInit {
   private platformId = inject(PLATFORM_ID);

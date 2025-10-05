@@ -8,7 +8,7 @@ import { RouterOutlet } from '@angular/router';
   standalone: true,
   imports: [CommonModule, RouterOutlet],
   templateUrl: './root.html',
-  styleUrl: './root.css'
+  styleUrl: './root.scss'
 })
 export class RootComponent {
   // Root simple: Home se encarga de inicializar Excel
