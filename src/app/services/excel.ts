@@ -3,7 +3,7 @@ import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import * as XLSX from 'xlsx';
 
-/** Tipos internos */
+/** Tipos internos (resumen necesario para las pantallas ya hechas) */
 type ProveedorPaso1 = {
   nombre: string;
   telefono: string;
@@ -24,7 +24,7 @@ type ItemProveedor = {
   permite_entero: boolean;
 };
 
-/** Hojas y encabezados del Excel */
+/** Definición de headers por hoja */
 const headers = {
   Proveedores: ['id_proveedor', 'nombre', 'cuit', 'telefono', 'email', 'direccion', 'notas'],
   Productos: [
@@ -38,7 +38,7 @@ const headers = {
     'permite_fraccion',
     'permite_entero',
     'usar_precio_como_venta',
-    'precio_compra_por_unidad_compra',
+    'precio_compra_por_unidad_compra'
   ],
   ProveedorProductos: [
     'id_proveedor',
@@ -46,7 +46,7 @@ const headers = {
     'unidad_compra',
     'cant_por_unidad_compra',
     'precio_compra_por_unidad_compra',
-    'ultima_actualizacion',
+    'ultima_actualizacion'
   ],
   Configuraciones: ['clave', 'valor', 'updated_at'],
   Ventas: [
@@ -58,7 +58,7 @@ const headers = {
     'fecha_pago',
     'cliente',
     'total',
-    'notas',
+    'notas'
   ],
   VentaItems: [
     'id_venta',
@@ -68,59 +68,49 @@ const headers = {
     'unidad_venta',
     'cantidad',
     'precio_unitario',
-    'subtotal',
+    'subtotal'
   ],
 } as const;
 
-/** Endpoints y MIME */
 const EXCEL_API = '/api/excel';
-const EXCEL_ASSET = 'assets/merceria.xlsx';
 const EXCEL_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-/** Helpers */
 function nowStr() {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 @Injectable({ providedIn: 'root' })
 export class ExcelService {
   private ready = false;
-
-  // Detección de plataforma
   private platformId = inject(PLATFORM_ID);
   private isBrowser = isPlatformBrowser(this.platformId);
 
-  /**
-   * Inicializa en el backend: si no existe el Excel en Blob, sube `assets/merceria.xlsx`.
-   * Llamalo en Home.ngOnInit().
-   */
+  /** Llamalo en Home.ngOnInit() */
   async initFromBackend(): Promise<void> {
-    if (!this.isBrowser) return; // evita SSR/prerender
-    // 1) ¿ya existe en Blob?
+    if (!this.isBrowser) return;
+
+    // 1) ¿Existe ya en backend?
     const r = await fetch(EXCEL_API, { method: 'GET', cache: 'no-store' });
     if (r.status === 404) {
-      // 2) Seed: subir assets/merceria.xlsx
-      const a = await fetch(EXCEL_ASSET, { cache: 'no-cache' });
-      if (!a.ok) throw new Error('No se pudo leer assets/merceria.xlsx');
-      const blob = await a.blob();
-      const up = await fetch(EXCEL_API, {
-        method: 'PUT',
-        headers: { 'Content-Type': EXCEL_MIME },
-        body: blob,
-      });
-      if (!up.ok) throw new Error('No se pudo crear el Excel en el backend.');
-      // Asegurar estructura mínima
-      await this.ensureAllSheets();
+      // 2) Crearlo vacío (sin depender de assets)
+      const wb = this.createBlankWorkbook();
+      await this.saveWorkbook(wb);
     } else if (!r.ok) {
-      throw new Error('No se pudo leer el Excel del backend.');
+      throw new Error('No se pudo leer el Excel del backend (GET /api/excel).');
     } else {
-      // existe → asegurar estructura por si falta alguna hoja
-      await this.ensureAllSheets();
+      // validamos que sea Excel real
+      const ok = await this.responseLooksLikeXlsx(r.clone());
+      if (!ok) {
+        // Si por alguna razón hubo HTML subido, lo reemplazamos por uno válido
+        const wb = this.createBlankWorkbook();
+        await this.saveWorkbook(wb);
+      }
     }
+
+    // 3) Asegurar estructura mínima (por si quedó algún archivo viejo sin todas las hojas)
+    await this.ensureAllSheets();
     this.ready = true;
   }
 
@@ -128,12 +118,45 @@ export class ExcelService {
     return this.ready;
   }
 
-  // ================== Utilidades del workbook (GET/PUT contra /api/excel) ==================
+  // -------------------- utilidades base --------------------
+
+  /** Crea un workbook vacío con TODAS las hojas + header. */
+  private createBlankWorkbook(): XLSX.WorkBook {
+    const wb = XLSX.utils.book_new();
+    (Object.keys(headers) as Array<keyof typeof headers>).forEach((name) => {
+      const aoa: any[][] = [Array.from((headers as any)[name])];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      XLSX.utils.book_append_sheet(wb, ws, name as string);
+    });
+    return wb;
+  }
+
+  /** Chequeo robusto para evitar parsear HTML como XLSX */
+  private async responseLooksLikeXlsx(res: Response): Promise<boolean> {
+    try {
+      const ct = (res.headers.get('content-type') || '').toLowerCase();
+      const ab = await res.arrayBuffer();
+      const u8 = new Uint8Array(ab);
+      const isPK = u8.length > 4 && u8[0] === 0x50 && u8[1] === 0x4b && u8[2] === 0x03 && u8[3] === 0x04; // 'PK..'
+      // content-type suele venir como application/vnd.openxml... o application/octet-stream
+      const ctLooksGood = ct.includes('spreadsheetml') || ct.includes('octet-stream');
+      return isPK && ctLooksGood;
+    } catch {
+      return false;
+    }
+  }
 
   private async readWorkbook(): Promise<{ wb: XLSX.WorkBook }> {
     if (!this.isBrowser) throw new Error('Solo disponible en navegador');
     const res = await fetch(EXCEL_API, { method: 'GET', cache: 'no-store' });
-    if (!res.ok) throw new Error('Error leyendo Excel del backend.');
+    if (!res.ok) throw new Error('Error leyendo Excel del backend (GET /api/excel).');
+
+    // Anti “Invalid HTML: could not find <table>”
+    const ok = await this.responseLooksLikeXlsx(res.clone());
+    if (!ok) {
+      throw new Error('El backend no devolvió un XLSX válido. Revisá /api/excel y vercel.json (routes).');
+    }
+
     const ab = await res.arrayBuffer();
     const wb = XLSX.read(ab, { type: 'array' });
     return { wb };
@@ -148,7 +171,7 @@ export class ExcelService {
       headers: { 'Content-Type': EXCEL_MIME },
       body: blob,
     });
-    if (!r.ok) throw new Error('No se pudo guardar el Excel en backend.');
+    if (!r.ok) throw new Error('No se pudo guardar el Excel en backend (PUT /api/excel).');
   }
 
   private toAOA(ws?: XLSX.WorkSheet): any[][] {
@@ -173,9 +196,7 @@ export class ExcelService {
     if (!wb.SheetNames.includes(name)) wb.SheetNames.push(name);
   }
 
-  /** Asegura que TODAS las hojas existan con su header; guarda si creó alguna. */
   private async ensureAllSheets(): Promise<void> {
-    if (!this.isBrowser) return;
     const { wb } = await this.readWorkbook();
     let touched = false;
     (Object.keys(headers) as Array<keyof typeof headers>).forEach((name) => {
@@ -190,9 +211,8 @@ export class ExcelService {
     if (touched) await this.saveWorkbook(wb);
   }
 
-  // ================== Flujos usados en tus pantallas ==================
+  // -------------------- métodos usados en tus pantallas --------------------
 
-  /** Crear proveedor + sus productos/proveedor (Paso 1 + Paso 2). */
   async guardarProveedorYProductos(proveedor: ProveedorPaso1, items: ItemProveedor[]) {
     const { wb } = await this.readWorkbook();
 
@@ -206,7 +226,6 @@ export class ExcelService {
     const prodIdx = idx(prodAoa[0] as string[]);
     const ppIdx = idx(ppAoa[0] as string[]);
 
-    // ---- Alta proveedor
     const provId = `prov_${Date.now()}`;
     const provRow: any[] = new Array((provAoa[0] as any[]).length).fill('');
     provRow[provIdx['id_proveedor']] = provId;
@@ -218,7 +237,6 @@ export class ExcelService {
     provRow[provIdx['notas']] = proveedor.notas || '';
     (provAoa as any[][]).push(provRow);
 
-    // ---- Productos + relaciones
     const findProduct = (nombre_base: string, variante?: string) => {
       const nb = (nombre_base || '').trim().toLowerCase();
       const varN = (variante || '').trim().toLowerCase();
@@ -284,7 +302,6 @@ export class ExcelService {
     await this.saveWorkbook(wb);
   }
 
-  /** Listar proveedores */
   async listProveedores(): Promise<
     Array<{
       id_proveedor: string;
@@ -298,10 +315,7 @@ export class ExcelService {
   > {
     const { wb } = await this.readWorkbook();
     const provAoa = this.ensureSheet(wb, 'Proveedores');
-    const idx = Object.fromEntries((provAoa[0] as string[]).map((h, i) => [h, i])) as Record<
-      string,
-      number
-    >;
+    const idx = Object.fromEntries((provAoa[0] as string[]).map((h, i) => [h, i])) as Record<string, number>;
 
     const out: any[] = [];
     for (let r = 1; r < provAoa.length; r++) {
@@ -322,14 +336,10 @@ export class ExcelService {
     return out as any[];
   }
 
-  /** Traer un proveedor por id */
   async getProveedor(id_proveedor: string) {
     const { wb } = await this.readWorkbook();
     const provAoa = this.ensureSheet(wb, 'Proveedores');
-    const map = Object.fromEntries((provAoa[0] as string[]).map((h, i) => [h, i])) as Record<
-      string,
-      number
-    >;
+    const map = Object.fromEntries((provAoa[0] as string[]).map((h, i) => [h, i])) as Record<string, number>;
 
     for (let r = 1; r < provAoa.length; r++) {
       const row = provAoa[r] || [];
@@ -350,7 +360,6 @@ export class ExcelService {
     return null;
   }
 
-  /** Actualizar datos básicos del proveedor */
   async updateProveedorBasic(p: {
     id_proveedor: string;
     nombre: string;
@@ -362,10 +371,7 @@ export class ExcelService {
   }) {
     const { wb } = await this.readWorkbook();
     const provAoa = this.ensureSheet(wb, 'Proveedores');
-    const map = Object.fromEntries((provAoa[0] as string[]).map((h, i) => [h, i])) as Record<
-      string,
-      number
-    >;
+    const map = Object.fromEntries((provAoa[0] as string[]).map((h, i) => [h, i])) as Record<string, number>;
 
     let rowIndex = -1;
     for (let r = 1; r < provAoa.length; r++) {
@@ -391,5 +397,4 @@ export class ExcelService {
   }
 }
 
-// Export default adicional por compatibilidad de imports
 export default ExcelService;
