@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx ng build --prerender=false --ssr=false",
+  "buildCommand": "npx ng build",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/:path*", "destination": "/" }
