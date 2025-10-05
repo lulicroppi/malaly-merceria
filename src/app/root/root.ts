@@ -1,3 +1,4 @@
+// src/app/root/root.ts
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
@@ -7,8 +8,8 @@ import { RouterOutlet } from '@angular/router';
   standalone: true,
   imports: [CommonModule, RouterOutlet],
   templateUrl: './root.html',
-  styleUrl: './root.scss'
+  styleUrl: './root.css'
 })
 export class RootComponent {
-  // 👋 Root ya no inicializa nada. Home se encarga del Excel.
+  // Root simple: Home se encarga de inicializar Excel
 }

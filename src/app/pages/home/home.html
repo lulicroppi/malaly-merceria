@@ -1,3 +1,6 @@
+<div *ngIf="loadingExcel" style="margin:16px">Preparando Excel…</div>
+<div *ngIf="!loadingExcel && errorExcel" style="margin:16px;color:#b00020">{{ errorExcel }}</div>
+
 <div *ngIf="loadingExcel" class="panel" style="margin:16px">
   Preparando Excel…
 </div>

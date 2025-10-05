@@ -1,15 +1,22 @@
 // api/excel.ts
-import { put, head } from '@vercel/blob';
-
 const EXCEL_PATH = 'merceria.xlsx';
 const EXCEL_MIME =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 export default async function handler(req: any, res: any) {
   try {
+    // Check de configuración del Blob
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return res
+        .status(500)
+        .send('Blob no configurado: falta la env var BLOB_READ_WRITE_TOKEN (conectá un Blob store al proyecto y redeploy).');
+    }
+
+    const { put, head } = await import('@vercel/blob');
+
     if (req.method === 'GET') {
       try {
-        const meta = await head(EXCEL_PATH); // si no existe, lanza error
+        const meta = await head(EXCEL_PATH); // lanza si no existe
         const url = (meta as any).downloadUrl ?? (meta as any).url;
         const fileRes = await fetch(url);
         if (!fileRes.ok) return res.status(502).send('Blob fetch failed');
@@ -41,8 +48,8 @@ export default async function handler(req: any, res: any) {
 
     res.setHeader('Allow', 'GET, PUT');
     return res.status(405).end('Method Not Allowed');
-  } catch (e) {
-    console.error(e);
-    return res.status(500).send('Internal Error');
+  } catch (e: any) {
+    console.error('api/excel error:', e);
+    return res.status(500).send('Function error en /api/excel (ver logs del deployment para más detalle).');
   }
 }
