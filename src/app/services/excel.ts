@@ -3,7 +3,7 @@ import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import * as XLSX from 'xlsx';
 
-/** Tipos internos (resumen necesario para las pantallas ya hechas) */
+/** Tipos mínimos usados por tus pantallas */
 type ProveedorPaso1 = {
   nombre: string;
   telefono: string;
@@ -24,8 +24,8 @@ type ItemProveedor = {
   permite_entero: boolean;
 };
 
-/** Definición de headers por hoja */
-const headers = {
+/** Hojas y encabezados del Excel */
+const HEADERS = {
   Proveedores: ['id_proveedor', 'nombre', 'cuit', 'telefono', 'email', 'direccion', 'notas'],
   Productos: [
     'id',
@@ -69,11 +69,12 @@ const headers = {
     'cantidad',
     'precio_unitario',
     'subtotal'
-  ],
+  ]
 } as const;
 
 const EXCEL_API = '/api/excel';
-const EXCEL_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const EXCEL_MIME =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 function nowStr() {
   const d = new Date();
@@ -91,25 +92,23 @@ export class ExcelService {
   async initFromBackend(): Promise<void> {
     if (!this.isBrowser) return;
 
-    // 1) ¿Existe ya en backend?
     const r = await fetch(EXCEL_API, { method: 'GET', cache: 'no-store' });
+
     if (r.status === 404) {
-      // 2) Crearlo vacío (sin depender de assets)
+      // No existe → crear uno vacío con todas las hojas y guardarlo
       const wb = this.createBlankWorkbook();
       await this.saveWorkbook(wb);
     } else if (!r.ok) {
       throw new Error('No se pudo leer el Excel del backend (GET /api/excel).');
     } else {
-      // validamos que sea Excel real
-      const ok = await this.responseLooksLikeXlsx(r.clone());
-      if (!ok) {
-        // Si por alguna razón hubo HTML subido, lo reemplazamos por uno válido
+      // Existe: validamos de forma permisiva; si es raro, lo reemplazamos
+      const { valid } = await this.peekContentTypeAndMagic(r.clone());
+      if (!valid) {
         const wb = this.createBlankWorkbook();
         await this.saveWorkbook(wb);
       }
     }
 
-    // 3) Asegurar estructura mínima (por si quedó algún archivo viejo sin todas las hojas)
     await this.ensureAllSheets();
     this.ready = true;
   }
@@ -118,46 +117,42 @@ export class ExcelService {
     return this.ready;
   }
 
-  // -------------------- utilidades base --------------------
+  // ===================== utilidades base =====================
 
-  /** Crea un workbook vacío con TODAS las hojas + header. */
   private createBlankWorkbook(): XLSX.WorkBook {
     const wb = XLSX.utils.book_new();
-    (Object.keys(headers) as Array<keyof typeof headers>).forEach((name) => {
-      const aoa: any[][] = [Array.from((headers as any)[name])];
+    (Object.keys(HEADERS) as Array<keyof typeof HEADERS>).forEach((name) => {
+      const aoa: any[][] = [Array.from((HEADERS as any)[name])];
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       XLSX.utils.book_append_sheet(wb, ws, name as string);
     });
     return wb;
   }
 
-  /** Chequeo robusto para evitar parsear HTML como XLSX */
-  private async responseLooksLikeXlsx(res: Response): Promise<boolean> {
-    try {
-      const ct = (res.headers.get('content-type') || '').toLowerCase();
-      const ab = await res.arrayBuffer();
-      const u8 = new Uint8Array(ab);
-      const isPK = u8.length > 4 && u8[0] === 0x50 && u8[1] === 0x4b && u8[2] === 0x03 && u8[3] === 0x04; // 'PK..'
-      // content-type suele venir como application/vnd.openxml... o application/octet-stream
-      const ctLooksGood = ct.includes('spreadsheetml') || ct.includes('octet-stream');
-      return isPK && ctLooksGood;
-    } catch {
-      return false;
-    }
+  /** Lee el body una sola vez y decide si "parece" XLSX (firma PK o CT razonable). */
+  private async peekContentTypeAndMagic(res: Response): Promise<{ valid: boolean; ab: ArrayBuffer; ct: string }> {
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+    const ab = await res.arrayBuffer();
+    const u8 = new Uint8Array(ab);
+    const hasPK = u8.length > 4 && u8[0] === 0x50 && u8[1] === 0x4b && u8[2] === 0x03 && u8[3] === 0x04; // 'PK\x03\x04'
+    const ctOk = ct.includes('spreadsheetml') || ct.includes('application/zip') || ct.includes('octet-stream');
+    // Aceptamos si tiene firma ZIP O si el content-type es razonable (algunos CDN no setean bien CT)
+    const valid = hasPK || ctOk;
+    return { valid, ab, ct };
   }
 
   private async readWorkbook(): Promise<{ wb: XLSX.WorkBook }> {
     if (!this.isBrowser) throw new Error('Solo disponible en navegador');
+
     const res = await fetch(EXCEL_API, { method: 'GET', cache: 'no-store' });
     if (!res.ok) throw new Error('Error leyendo Excel del backend (GET /api/excel).');
 
-    // Anti “Invalid HTML: could not find <table>”
-    const ok = await this.responseLooksLikeXlsx(res.clone());
-    if (!ok) {
-      throw new Error('El backend no devolvió un XLSX válido. Revisá /api/excel y vercel.json (routes).');
+    const { valid, ab, ct } = await this.peekContentTypeAndMagic(res);
+    if (!valid) {
+      throw new Error(`El backend no devolvió un XLSX válido. (Content-Type="${ct || 'desconocido'}")`);
     }
 
-    const ab = await res.arrayBuffer();
+    // Si es válido, parseamos directamente el buffer
     const wb = XLSX.read(ab, { type: 'array' });
     return { wb };
   }
@@ -169,7 +164,7 @@ export class ExcelService {
     const r = await fetch(EXCEL_API, {
       method: 'PUT',
       headers: { 'Content-Type': EXCEL_MIME },
-      body: blob,
+      body: blob
     });
     if (!r.ok) throw new Error('No se pudo guardar el Excel en backend (PUT /api/excel).');
   }
@@ -179,11 +174,11 @@ export class ExcelService {
     return XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
   }
 
-  private ensureSheet(wb: XLSX.WorkBook, name: keyof typeof headers): any[][] {
+  private ensureSheet(wb: XLSX.WorkBook, name: keyof typeof HEADERS): any[][] {
     const ws = wb.Sheets[name as string];
     let aoa = this.toAOA(ws);
     if (!aoa || aoa.length === 0) {
-      const initHeader = Array.from((headers as any)[name]) as any[];
+      const initHeader = Array.from((HEADERS as any)[name]) as any[];
       aoa = [initHeader];
       wb.Sheets[name as string] = XLSX.utils.aoa_to_sheet(aoa);
       if (!wb.SheetNames.includes(name as string)) wb.SheetNames.push(name as string);
@@ -199,11 +194,11 @@ export class ExcelService {
   private async ensureAllSheets(): Promise<void> {
     const { wb } = await this.readWorkbook();
     let touched = false;
-    (Object.keys(headers) as Array<keyof typeof headers>).forEach((name) => {
+    (Object.keys(HEADERS) as Array<keyof typeof HEADERS>).forEach((name) => {
       const ws = wb.Sheets[name as string];
       const aoa = this.toAOA(ws);
       if (!aoa || aoa.length === 0) {
-        const init: any[][] = [Array.from((headers as any)[name]) as any[]];
+        const init: any[][] = [Array.from((HEADERS as any)[name]) as any[]];
         this.writeSheet(wb, name as string, init);
         touched = true;
       }
@@ -211,7 +206,7 @@ export class ExcelService {
     if (touched) await this.saveWorkbook(wb);
   }
 
-  // -------------------- métodos usados en tus pantallas --------------------
+  // ===================== métodos usados en tus pantallas =====================
 
   async guardarProveedorYProductos(proveedor: ProveedorPaso1, items: ItemProveedor[]) {
     const { wb } = await this.readWorkbook();
@@ -329,7 +324,7 @@ export class ExcelService {
         cuit: String(row[idx['cuit']] || '').trim(),
         email: String(row[idx['email']] || '').trim(),
         direccion: String(row[idx['direccion']] || '').trim(),
-        notas: String(row[idx['notas']] || '').trim(),
+        notas: String(row[idx['notas']] || '').trim()
       });
     }
     out.sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -353,7 +348,7 @@ export class ExcelService {
           cuit: String(row[map['cuit']] || '').trim(),
           email: String(row[map['email']] || '').trim(),
           direccion: String(row[map['direccion']] || '').trim(),
-          notas: String(row[map['notas']] || '').trim(),
+          notas: String(row[map['notas']] || '').trim()
         };
       }
     }
