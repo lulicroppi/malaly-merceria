@@ -1,7 +1,6 @@
 {
-  "buildCommand": "npx ng build",
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/:path*", "destination": "/" }
+  "routes": [
+    { "src": "^/api/(.*)$", "dest": "/api/$1" },
+    { "src": "^(?!/api/).*", "dest": "/" }
   ]
 }
