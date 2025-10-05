@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build:spa",
+  "buildCommand": "npx ng build --prerender=false --ssr=false",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/:path*", "destination": "/" }
