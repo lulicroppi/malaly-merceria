@@ -4,6 +4,7 @@ import {
   AbstractControl, ValidationErrors
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { CommonModule } from '@angular/common';
 
 function telValidator(ctrl: AbstractControl): ValidationErrors | null {
   const v: string = (ctrl.value || '').toString();
@@ -22,7 +23,7 @@ function cuitBasico(ctrl: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'app-crear-proveedor',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './crear-proveedor.html',
   styleUrl: './crear-proveedor.scss'
 })
