@@ -8,7 +8,7 @@ import { ExcelService } from '../../services/excel';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './home.html',
-  styleUrl: './home.css'
+  styleUrl: './home.scss'
 })
 export class HomeComponent implements OnInit {
   loadingExcel = true;
