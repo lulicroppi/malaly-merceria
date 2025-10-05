@@ -1,21 +1,30 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ExcelService } from '../../services/excel';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [RouterLink],
+  imports: [CommonModule, RouterLink],
   templateUrl: './home.html',
-  styleUrl: './home.scss'
+  styleUrl: './home.css'
 })
-export class HomeComponent implements OnInit{
+export class HomeComponent implements OnInit {
+  loadingExcel = true;
+  errorExcel = '';
 
-  constructor(private excelService: ExcelService){}
-
+  constructor(private excel: ExcelService) {}
 
   async ngOnInit() {
-    this.excelService.warmupStructure().catch((x) => console.log(x));
+    try {
+      // Inicializa el Excel en el backend (si no existe, lo crea desde assets)
+      await this.excel.initFromBackend();
+    } catch (e: any) {
+      this.errorExcel = e?.message || 'No se pudo inicializar el Excel.';
+      console.error(e);
+    } finally {
+      this.loadingExcel = false;
+    }
   }
-
 }

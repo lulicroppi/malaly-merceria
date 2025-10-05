@@ -1,3 +1,10 @@
+<div *ngIf="loadingExcel" class="panel" style="margin:16px">
+  Preparando Excel…
+</div>
+<div *ngIf="!loadingExcel && errorExcel" class="panel" style="margin:16px; color:#b00020">
+  {{ errorExcel }}
+</div>
+
 <div class="home">
   <header class="hero">
     <img src="assets/merceria-logo.png" alt="Mercería" class="hero__img" />
