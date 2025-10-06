@@ -6,7 +6,7 @@ import { CrearProductosComponent } from './pages/proveedores/crear-productos/cre
 import { ModificarProveedorComponent } from './pages/proveedores/modificar-proveedor/modificar-proveedor';
 
 export const routes: Routes = [
-  { path: '', component: HomeComponent, pathMatch: 'full' },
+  { path: 'home', component: HomeComponent, pathMatch: 'full' },
   { path: 'proveedores', component: ProveedoresComponent, pathMatch: 'full' },
   { path: 'proveedores/crear', component: CrearProveedorComponent },
   { path: 'proveedores/crear/productos', component: CrearProductosComponent},

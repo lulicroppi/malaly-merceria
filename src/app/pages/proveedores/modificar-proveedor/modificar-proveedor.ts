@@ -100,13 +100,12 @@ export class ModificarProveedorComponent implements OnInit {
         direccion: String(v.direccion || '').trim(),
         notas: String(v.notas || '').trim(),
       });
-      alert('Proveedor actualizado en Excel ✅');
       this.form.markAsPristine();
     } catch (e:any) {
       alert(e?.message || 'No se pudo actualizar el proveedor.');
     } finally {
       this.saving = false;
-      this.router.navigateByUrl('');
+      this.router.navigateByUrl('home');
     }
   }
 }
