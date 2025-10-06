@@ -239,12 +239,12 @@ export class CrearProductosComponent implements OnInit {
       // limpiar borradores
       sessionStorage.removeItem('crearProveedor.step1');
       sessionStorage.removeItem('crearProveedor.step2.items');
-      this.router.navigateByUrl('/proveedores');
     } catch (err:any) {
       console.error(err);
       alert('No se pudo guardar en el Excel. Probá de nuevo.');
     } finally {
       this.saving = false;
+      this.router.navigateByUrl('');
     }
   }
 

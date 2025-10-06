@@ -105,7 +105,7 @@ export class ModificarProveedorComponent implements OnInit {
       alert(e?.message || 'No se pudo actualizar el proveedor.');
     } finally {
       this.saving = false;
-      this.router.navigateByUrl('home');
+      this.router.navigateByUrl('');
     }
   }
 }
