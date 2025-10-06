@@ -2,6 +2,7 @@
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import * as XLSX from 'xlsx';
+import { BehaviorSubject } from 'rxjs';
 
 /** Tipos internos */
 type ProveedorPaso1 = {
@@ -90,9 +91,14 @@ function nowStr() {
 export class ExcelService {
   private ready = false;
 
+  // Cache en memoria del workbook
+  private wbCache: XLSX.WorkBook | null = null;
+
   // Detección de plataforma
   private platformId = inject(PLATFORM_ID);
   private isBrowser = isPlatformBrowser(this.platformId);
+
+  lista$ = new BehaviorSubject<any>(null);
 
   /**
    * Inicializa en el backend: si no existe el Excel en Blob, sube `assets/merceria.xlsx`.
@@ -100,10 +106,8 @@ export class ExcelService {
    */
   async initFromBackend(): Promise<void> {
     if (!this.isBrowser) return; // evita SSR/prerender
-    // 1) ¿ya existe en Blob?
     const r = await fetch(EXCEL_API, { method: 'GET', cache: 'no-store' });
     if (r.status === 404) {
-      // 2) Seed: subir assets/merceria.xlsx
       const a = await fetch(EXCEL_ASSET, { cache: 'no-cache' });
       if (!a.ok) throw new Error('No se pudo leer assets/merceria.xlsx');
       const blob = await a.blob();
@@ -113,12 +117,10 @@ export class ExcelService {
         body: blob,
       });
       if (!up.ok) throw new Error('No se pudo crear el Excel en el backend.');
-      // Asegurar estructura mínima
       await this.ensureAllSheets();
     } else if (!r.ok) {
       throw new Error('No se pudo leer el Excel del backend.');
     } else {
-      // existe → asegurar estructura por si falta alguna hoja
       await this.ensureAllSheets();
     }
     this.ready = true;
@@ -132,10 +134,14 @@ export class ExcelService {
 
   private async readWorkbook(): Promise<{ wb: XLSX.WorkBook }> {
     if (!this.isBrowser) throw new Error('Solo disponible en navegador');
+    // Si ya tenemos cache, devolverla
+    if (this.wbCache) return { wb: this.wbCache };
     const res = await fetch(EXCEL_API, { method: 'GET', cache: 'no-store' });
     if (!res.ok) throw new Error('Error leyendo Excel del backend.');
     const ab = await res.arrayBuffer();
     const wb = XLSX.read(ab, { type: 'array' });
+    this.wbCache = wb;
+    this.lista$.next(wb);
     return { wb };
   }
 
@@ -149,6 +155,9 @@ export class ExcelService {
       body: blob,
     });
     if (!r.ok) throw new Error('No se pudo guardar el Excel en backend.');
+    // Actualizar cache inmediatamente
+    this.wbCache = wb;
+    this.lista$.next(wb);
   }
 
   private toAOA(ws?: XLSX.WorkSheet): any[][] {
@@ -173,7 +182,6 @@ export class ExcelService {
     if (!wb.SheetNames.includes(name)) wb.SheetNames.push(name);
   }
 
-  /** Asegura que TODAS las hojas existan con su header; guarda si creó alguna. */
   private async ensureAllSheets(): Promise<void> {
     if (!this.isBrowser) return;
     const { wb } = await this.readWorkbook();

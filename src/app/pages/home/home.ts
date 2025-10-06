@@ -3,11 +3,12 @@ import { Component, OnInit, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ExcelService } from '../../services/excel';
+import { MatProgressSpinnerModule } from  '@angular/material/progress-spinner' ;
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, MatProgressSpinnerModule],
   templateUrl: './home.html',
   styleUrl: './home.scss'
 })

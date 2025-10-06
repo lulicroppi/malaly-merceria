@@ -1,5 +1,6 @@
 {
   "buildCommand": "npx ng build",
+  "devCommand": "ng run malaly-merceria:serve:ssr --port 3000",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/:path*", "destination": "/" }

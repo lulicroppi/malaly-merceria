@@ -2,24 +2,27 @@
 <div *ngIf="!loadingExcel && errorExcel" style="margin:16px;color:#b00020">{{ errorExcel }}</div>
 
 <div *ngIf="loadingExcel" class="panel" style="margin:16px">
-  Preparando Excel…
+  <mat-spinner></mat-spinner>
 </div>
 <div *ngIf="!loadingExcel && errorExcel" class="panel" style="margin:16px; color:#b00020">
   {{ errorExcel }}
 </div>
 
-<div class="home">
-  <header class="hero">
-    <img src="assets/merceria-logo.png" alt="Mercería" class="hero__img" />
-  </header>
+<div *ngIf="!loadingExcel">
+  <div class="home">
+    <header class="hero">
+      <img src="assets/merceria-logo.png" alt="Mercería" class="hero__img" />
+    </header>
 
-  <!-- agregamos la clase panel -->
-  <nav class="panel menu">
-    <button class="menu__btn" routerLink="/proveedores">Carga Proveedores</button>
-    <button class="menu__btn" routerLink="/productos">Productos</button>
-    <button class="menu__btn" routerLink="/carrito">Armar Carrito</button>
-    <button class="menu__btn" routerLink="/config">Configuraciones Generales</button>
-    <button class="menu__btn" routerLink="/finanzas">Finanzas</button>
-  </nav>
+    <!-- agregamos la clase panel -->
+    <nav class="panel menu">
+      <button class="menu__btn" routerLink="/proveedores">Carga Proveedores</button>
+      <button class="menu__btn" routerLink="/productos">Productos</button>
+      <button class="menu__btn" routerLink="/carrito">Armar Carrito</button>
+      <button class="menu__btn" routerLink="/config">Configuraciones Generales</button>
+      <button class="menu__btn" routerLink="/finanzas">Finanzas</button>
+    </nav>
+  </div>
 </div>
+
 
